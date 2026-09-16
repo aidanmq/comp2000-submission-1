@@ -7,8 +7,8 @@ public final class NoiseTrader extends Trader {
     private final Random rng = new Random();
     private final double activityChance;
 
-    public NoiseTrader(String name, double startingCash, double startingHoldingsValue, double activityChance) {
-        super(name, startingCash, startingHoldingsValue);
+    public NoiseTrader(String name, double startingCash, double activityChance) {
+        super(name, startingCash);
         this.activityChance = activityChance;
     }
 
