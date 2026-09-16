@@ -4,7 +4,7 @@
 
 **Student ID: 47596686**
 
-**GitHub repo URL:** (your own fork of your team's repository, not your team's URL)
+**GitHub repo URL:** https://github.com/awinterALT/comp2000-submission-1-FORK
 
 ---
 
