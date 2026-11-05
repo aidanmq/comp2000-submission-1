@@ -7,16 +7,11 @@ import javax.swing.Timer;
 public final class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            Market market = new Market(100.0, new LinearImpactModel(0.02));
-            market.addTrader(TrendTrader.momentum("Momentum-A", 5000, 5));
-            market.addTrader(TrendTrader.momentum("Momentum-B", 5000, 8));
-            market.addTrader(TrendTrader.contrarian("Contrarian-A", 5000, 5));
-            market.addTrader(TrendTrader.contrarian("Contrarian-B", 5000, 10));
-            for (int i = 1; i <= 6; i++) {
-                market.addTrader(new NoiseTrader("Noise-" + i, 1800.0 , 0.35));
-            }
+            Market market = buildMarket();
+            TransactionFeed feed = new TransactionFeed(10);
+            market.addListener(feed);
  
-            MarketPanel panel = new MarketPanel(market);
+            MarketPanel panel = new MarketPanel(market, feed);
  
             JFrame frame = new JFrame("Fake Stock Market Simulation");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -31,5 +26,17 @@ public final class Main {
             });
             timer.start();
         });
+    }
+
+    private static Market buildMarket() {
+        return new MarketBuilder()
+            .startingPrice(100.0)
+            .impactModel(new LinearImpactModel(0.02))
+            .addMomentumTrader("Momentum-A", 5000, 5)
+            .addMomentumTrader("Momentum-B", 5000, 8)
+            .addContrarianTrader("Contrarian-A", 5000, 5)
+            .addContrarianTrader("Contrarian-B", 5000, 10)
+            .addNoiseTraders("Noise-", 6, 1800.0, 0.35)
+            .build();
     }
 }

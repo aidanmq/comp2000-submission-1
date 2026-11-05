@@ -17,8 +17,8 @@ public final class Market {
     private double previousPrice;
     private final PriceImpactModel impactModel;
     private final EventLog<Double> priceHistory = new EventLog<>(PRICE_HISTORY_CAPACITY);
-    private final EventLog<Transaction> transactionLog = new EventLog<>(10);
     private final List<Trader> traders = new ArrayList<>();
+    private final List<MarketListener> listeners = new ArrayList<>();
     private final Random rng = new Random();
  
     public Market(double startingPrice, PriceImpactModel impactModel) {
@@ -29,11 +29,11 @@ public final class Market {
     }
  
     public void addTrader(Trader trader) { traders.add(trader); }
+    public void addListener(MarketListener listener) { listeners.add(listener); }
  
     public double price() { return price; }
     public double previousPrice() { return previousPrice; }
     public EventLog<Double> priceHistory() { return priceHistory; }
-    public EventLog<Transaction> transactionLog() { return transactionLog; }
  
     public void tick() {
         previousPrice = price;
@@ -47,6 +47,7 @@ public final class Market {
         price += (rng.nextDouble() - 0.5) * DRIFT_NOISE;
         price = Math.max(MIN_PRICE, price);
         priceHistory.add(price);
+        listeners.forEach(l -> l.onTick(price));
     }
  
     private void execute(Trader trader, Order order) {
@@ -60,6 +61,6 @@ public final class Market {
  
         price += impactModel.priceDelta(order, price);
         price = Math.max(MIN_PRICE, price);
-        transactionLog.add(new Transaction(order.type(), order.amount()));
+        listeners.forEach(l -> l.onTrade(trader, order, price));
     }
 }
