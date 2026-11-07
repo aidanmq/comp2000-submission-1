@@ -10,8 +10,10 @@ public final class Main {
             Market market = buildMarket();
             TransactionFeed feed = new TransactionFeed(10);
             market.addListener(feed);
+            MarketStats stats = new MarketStats(200);
+            market.addListener(stats);
  
-            MarketPanel panel = new MarketPanel(market, feed);
+            MarketPanel panel = new MarketPanel(market, feed, stats);
  
             JFrame frame = new JFrame("Fake Stock Market Simulation");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

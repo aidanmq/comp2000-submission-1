@@ -1,14 +1,19 @@
-package market;
+package redundant;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-public final class ContrarianTrader extends Trader {
+import market.Market;
+import market.Order;
+import market.Trader;
+import market.TransactionType;
+
+public final class MomentumTrader extends Trader {
     private final Random rng = new Random();
     private final int windowSize;
 
-    public ContrarianTrader(String name, double startingCash, double startingHoldingsValue, int windowSize) {
+    public MomentumTrader(String name, double startingCash, double startingHoldingsValue, int windowSize) {
         super(name, startingCash, startingHoldingsValue);
         this.windowSize = windowSize;
     }
@@ -25,9 +30,9 @@ public final class ContrarianTrader extends Trader {
         if (Math.abs(trend) < 0.01) return Optional.empty();
 
         double amount = 20 + rng.nextDouble() * 60;
-        if (trend < 0 && cash >= amount) {
+        if (trend > 0 && cash >= amount) {
             return Optional.of(new Order(TransactionType.BUY, amount));
-        } else if (trend > 0 && holdingsValue >= amount) {
+        } else if (trend < 0 && holdingsValue >= amount) {
             return Optional.of(new Order(TransactionType.SELL, amount));
         }
         return Optional.empty();

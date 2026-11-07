@@ -6,6 +6,7 @@ import java.util.List;
 public final class MarketBuilder {
     private double startingPrice = 100.0;
     private PriceImpactModel impactModel;
+    private boolean parallelDecisions = false;
     private final List<Trader> traders = new ArrayList<>();
 
     public MarketBuilder startingPrice(double price) {
@@ -16,6 +17,11 @@ public final class MarketBuilder {
 
     public MarketBuilder impactModel(PriceImpactModel model) {
         this.impactModel = model;
+        return this;
+    }
+
+    public MarketBuilder parallelDecisions(boolean parallel) {
+        this.parallelDecisions = parallel;
         return this;
     }
 
@@ -45,6 +51,7 @@ public final class MarketBuilder {
         }
         Market market = new Market(startingPrice, impactModel);
         traders.forEach(market::addTrader);
+        market.setParallelDecisions(parallelDecisions);
         return market;
     }
 }

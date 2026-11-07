@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class Market {
     public static final String TICKER = "FAKE";
@@ -20,6 +22,7 @@ public final class Market {
     private final List<Trader> traders = new ArrayList<>();
     private final List<MarketListener> listeners = new ArrayList<>();
     private final Random rng = new Random();
+    private boolean parallelDecisions = false;
  
     public Market(double startingPrice, PriceImpactModel impactModel) {
         this.price = startingPrice;
@@ -30,6 +33,8 @@ public final class Market {
  
     public void addTrader(Trader trader) { traders.add(trader); }
     public void addListener(MarketListener listener) { listeners.add(listener); }
+
+    public void setParallelDecisions(boolean parallel) { this.parallelDecisions = parallel; }
  
     public double price() { return price; }
     public double previousPrice() { return previousPrice; }
@@ -37,11 +42,13 @@ public final class Market {
  
     public void tick() {
         previousPrice = price;
- 
-        for (Trader trader : traders) {
-            Optional<Order> orderOpt = trader.decide(this);
-            if (orderOpt.isEmpty()) continue;
-            execute(trader, orderOpt.get());
+
+        List<Optional<Order>> decisions = collectDecisions();
+
+        for (int i = 0; i < decisions.size(); i++) {
+            if (decisions.get(i).isPresent()) {
+                execute(traders.get(i), decisions.get(i).get());
+            }
         }
  
         price += (rng.nextDouble() - 0.5) * DRIFT_NOISE;
@@ -50,6 +57,11 @@ public final class Market {
         listeners.forEach(l -> l.onTick(price));
     }
  
+    private List<Optional<Order>> collectDecisions() {
+        Stream<Trader> stream = parallelDecisions ? traders.parallelStream() : traders.stream();
+        return stream.map(trader -> trader.decide(this)).collect(Collectors.toList());
+    }
+
     private void execute(Trader trader, Order order) {
         if (order.type() == TransactionType.BUY) {
             if (trader.cash() < order.amount()) return;
