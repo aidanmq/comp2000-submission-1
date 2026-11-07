@@ -8,13 +8,18 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Shape;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
+import java.awt.geom.RoundRectangle2D;
 import java.util.List;
+import java.util.Map;
 
 public final class MarketPanel extends JPanel {
     private final Market market;
+    private final TransactionFeed feed;
+    private final MarketStats stats;
 
     private static final Color GREEN = new Color(60, 200, 100);
     private static final Color RED = new Color(220, 70, 70);
@@ -23,15 +28,16 @@ public final class MarketPanel extends JPanel {
     private static final Color GRID = new Color(255, 255, 255, 22);
     private static final Color CHART_BG = new Color(28, 30, 35);
 
-    // Opacity of the 4 most recent transactions: newest first, then it's gone.
     private static final int[] FEED_ALPHAS = {255, 191, 128, 64};
 
     private static final int MARGIN = 24;
     private static final int CHART_TOP = 170;
     private static final int AXIS_LABEL_WIDTH = 62;
 
-    public MarketPanel(Market market) {
+    public MarketPanel(Market market, TransactionFeed feed, MarketStats stats) {
         this.market = market;
+        this.feed = feed;
+        this.stats = stats;
         setPreferredSize(new Dimension(900, 640));
         setBackground(new Color(22, 24, 28));
     }
@@ -51,6 +57,7 @@ public final class MarketPanel extends JPanel {
 
         paintHeader(g2);
         paintPrice(g2);
+        paintStats(g2);
         paintChart(g2, chartX, chartY, chartW, chartH);
         paintTransactionFeed(g2, chartX + 14, chartY + 14);
     }
@@ -77,10 +84,58 @@ public final class MarketPanel extends JPanel {
         g2.drawString(String.format("%+.2f (%+.2f%%) this tick", change, pct), MARGIN, 142);
     }
 
+    private void paintStats(Graphics2D g2) {
+        int width = 280;
+        int x = Math.max(getWidth() - MARGIN - width, 360);
+
+        g2.setColor(DIM);
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.drawString("Buy vs sell volume (last " + stats.capacity() + " trades)", x, 30);
+
+        int barY = 40;
+        int barH = 12;
+        Shape previousClip = g2.getClip();
+        g2.clip(new RoundRectangle2D.Double(x, barY, width, barH, 6, 6));
+        g2.setColor(new Color(255, 255, 255, 28));
+        g2.fillRect(x, barY, width, barH);
+        if (stats.tradeCount() > 0) {
+            int buyWidth = (int) Math.round(stats.buyShare() * width);
+            g2.setColor(GREEN);
+            g2.fillRect(x, barY, buyWidth, barH);
+            g2.setColor(RED);
+            g2.fillRect(x + buyWidth, barY, width - buyWidth, barH);
+        }
+        g2.setClip(previousClip);
+
+        FontMetrics fm = g2.getFontMetrics();
+        if (stats.tradeCount() == 0) {
+            g2.setColor(DIM);
+            g2.drawString("Waiting for trades...", x, barY + barH + 18);
+            return;
+        }
+        int buyPct = (int) Math.round(stats.buyShare() * 100);
+        String sellLabel = "Sell " + (100 - buyPct) + "%";
+        g2.setColor(GREEN);
+        g2.drawString("Buy " + buyPct + "%", x, barY + barH + 18);
+        g2.setColor(RED);
+        g2.drawString(sellLabel, x + width - fm.stringWidth(sellLabel), barY + barH + 18);
+
+        g2.setColor(DIM);
+        g2.drawString("Most active traders", x, 98);
+        List<Map.Entry<String, Double>> top = stats.topTradersByVolume(3);
+        int rowY = 116;
+        for (Map.Entry<String, Double> entry : top) {
+            String amount = String.format("$%,.0f", entry.getValue());
+            g2.setColor(NEUTRAL);
+            g2.drawString(entry.getKey(), x, rowY);
+            g2.drawString(amount, x + width - fm.stringWidth(amount), rowY);
+            rowY += 17;
+        }
+    }
+
     private void paintChart(Graphics2D g2, int x, int y, int w, int h) {
         g2.setColor(CHART_BG);
         g2.fillRoundRect(x, y, w, h, 12, 12);
-
 
         List<Double> history = market.priceHistory().recent();
         if (history.size() < 2) return;
@@ -91,12 +146,9 @@ public final class MarketPanel extends JPanel {
         int plotBottom = y + h - 12;
         int plotH = plotBottom - plotTop;
 
-        double min = Double.MAX_VALUE;
-        double max = -Double.MAX_VALUE;
-        for (double p : history) {
-            min = Math.min(min, p);
-            max = Math.max(max, p);
-        }
+        PriceSummary summary = history.stream().collect(PriceSummary.collector());
+        double min = summary.min();
+        double max = summary.max();
         double range = Math.max(max - min, 1.0);
         double mid = (max + min) / 2.0;
         double lo = mid - range * 0.62;
@@ -157,7 +209,7 @@ public final class MarketPanel extends JPanel {
         g2.drawString("Recent activity", x, y + 8);
 
         g2.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        List<Transaction> recent = market.transactionLog().recent();
+        List<Transaction> recent = feed.recent();
         int rowY = y + 28;
         for (int i = 0; i < FEED_ALPHAS.length && i < recent.size(); i++) {
             Transaction t = recent.get(i);

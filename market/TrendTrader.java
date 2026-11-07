@@ -30,9 +30,7 @@ public final class TrendTrader extends Trader {
         List<Double> history = market.priceHistory().recent();
         if (history.size() < windowSize) return Optional.empty();
 
-        double newest = history.get(0);
-        double oldest = history.get(windowSize - 1);
-        double trend = newest - oldest;
+        double trend = history.stream().limit(windowSize).collect(PriceSummary.collector()).trend();
 
         if (Math.abs(trend) < 0.01) return Optional.empty(); // flat - sit out
 
