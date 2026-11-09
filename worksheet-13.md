@@ -2,8 +2,8 @@
 
 **Student name:** Aidan Winter
 
-**GitHub repo URL:** (your own fork of your team's repository, not your team's URL)
-
+**GitHub repo URL:** https://github.com/awinterALT/comp2000-submission-2/tree/submission-2
+- Work in the repo is done in the "submission 2" branch.
 ---
 
 ## 1. Design Patterns
